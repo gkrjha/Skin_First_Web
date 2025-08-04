@@ -9,6 +9,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DatabaseService } from './Database/database.service';
 import { AmdinModule } from './amdin/amdin.module';
 import { AuthModule } from './auth/auth.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { AdminModule } from './admin/admin.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -28,6 +30,8 @@ import { AuthModule } from './auth/auth.module';
     AppointmentModule,
     AmdinModule,
     AuthModule,
+    CloudinaryModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseService],

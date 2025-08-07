@@ -1,8 +1,11 @@
 import React from "react";
 import splashImage from "../assets/Group 91.jpg";
-const SplashScreen = () => {
+const SplashScreen = ({ onClick }) => {
   return (
-    <div className="bg-gradient-to-r from-black to-[#0072ff] text-white h-[100vh] flex justify-center items-center text-[4rem]">
+    <div
+      className="bg-gradient-to-r from-black to-[#0072ff] text-white h-[100vh] flex justify-center items-center text-[4rem] w-[100%]"
+      onClick={onClick}
+    >
       <div className="flex flex-col items-center justify-center">
         <img
           src={splashImage}

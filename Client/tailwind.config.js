@@ -4,14 +4,11 @@ export default {
   theme: {
     extend: {
       screens: {
-        xx: "350px",
-        xs: "480px",
+        xs: "360px",
         sm: "640px",
         md: "768px",
         lg: "1024px",
         xl: "1280px",
-        "2xl": "1440px",
-        "3xl": "1600px",
       },
       colors: {
         primary: "#2260FF",
@@ -20,7 +17,7 @@ export default {
         light: "#FFFFFF",
       },
       fontFamily: {
-        spartan: ['"League Spartan"', "sans-serif"], // Custom font name
+        spartan: ['"League Spartan"', "sans-serif"],
       },
     },
   },

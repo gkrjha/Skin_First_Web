@@ -23,7 +23,6 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // ✅ Patient signup logic (sirf patient ka signup allowed yaha)
   async signup(dto: CreatePatientDto): Promise<{ token: string; user: any }> {
     const existingUser = await this.patientModel.findOne({ email: dto.email });
     if (existingUser) {
@@ -38,7 +37,7 @@ export class AuthService {
     const payload = {
       sub: savedUser._id,
       email: savedUser.email,
-      role: 'patient', // ✅ Role hardcoded patient for signup
+      role: 'patient',
     };
 
     const token = this.jwtService.sign(payload);
@@ -49,39 +48,43 @@ export class AuthService {
     return { token, user: userObj };
   }
 
-  // ✅ Login Logic for Patient, Doctor, Admin (All handled here)
   async login(dto: LoginUserDto): Promise<{ token: string; user: any }> {
-    let user = await this.patientModel.findOne({ email: dto.email });
-    let role = 'patient'; // Default maan ke chalte hai
+    let user;
+    let role = '';
 
-    // ❌ Patient nahi mila, to doctor check karo
+    user = await this.patientModel.findOne({ email: dto.email });
+    if (user) {
+      role = 'patient';
+    }
+
     if (!user) {
       user = await this.doctorModel.findOne({ email: dto.email });
       if (user) {
         role = 'doctor';
+        console.log(user.role);
+        if (user.status !== 'approved') {
+          throw new UnauthorizedException('Doctor account is not approved yet');
+        }
       }
     }
 
-    // ❌ Doctor bhi nahi mila, ab admin check karo
     if (!user) {
       user = await this.adminModel.findOne({ email: dto.email });
       if (user) {
         role = 'admin';
+        console.log(user.role);
       }
     }
 
-    // ❌ Agar tino me nahi mila user
     if (!user) {
       throw new NotFoundException('Invalid email or password');
     }
 
-    // ✅ Password validate karo
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // ✅ JWT payload banaao
     const payload = {
       sub: user._id,
       email: user.email,
@@ -91,7 +94,8 @@ export class AuthService {
     const token = this.jwtService.sign(payload);
 
     const userObj = user.toObject();
-    delete (userObj as any).password;
+    delete userObj.password;
+    userObj.role = role;
 
     return { token, user: userObj };
   }

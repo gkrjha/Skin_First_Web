@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { AdminDocument, Admin } from 'src/Schema/Admin.schema';
@@ -9,6 +10,8 @@ import { Model } from 'mongoose';
 import { CreateAdminDto } from 'src/DOTS/Admin.dto';
 import * as bcrypt from 'bcryptjs';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { JwtPayload } from 'jsonwebtoken';
+import { DoctorModule } from 'src/doctor/doctor.module';
 
 @Injectable()
 export class AdminService {
@@ -17,13 +20,12 @@ export class AdminService {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  // ✅ Check if any admin exists
   async adminExists(): Promise<boolean> {
     const admin = await this.adminModel.findOne({ role: 'admin' });
     return !!admin;
   }
 
-  // ✅ One-time signup
+  //One-time signup
   async createFirstAdmin(dto: CreateAdminDto) {
     const exists = await this.adminExists();
     if (exists) throw new UnauthorizedException('Admin already exists');
@@ -34,7 +36,6 @@ export class AdminService {
     return { message: 'Admin created successfully', email: admin.email };
   }
 
-  // ✅ Authenticated admin creates new admin
   async createAdmin(dto: CreateAdminDto) {
     const existing = await this.adminModel.findOne({ email: dto.email });
     if (existing)
@@ -46,7 +47,6 @@ export class AdminService {
     return { message: 'Admin created', email: admin.email };
   }
 
-  // ✅ Login (for JWT)
   async validateAdmin(email: string, password: string): Promise<AdminDocument> {
     const admin = await this.adminModel.findOne({ email });
     if (!admin) throw new UnauthorizedException('Invalid credentials');
@@ -56,4 +56,6 @@ export class AdminService {
 
     return admin;
   }
+
+ 
 }

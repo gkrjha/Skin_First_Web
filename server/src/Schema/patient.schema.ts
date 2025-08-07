@@ -13,7 +13,7 @@ export class Patient {
   @Prop() dob?: string;
   @Prop() gender?: string;
   @Prop() address?: string;
-  @Prop({ default: '' }) medicalHistoryNote?: string;
+  @Prop({ default: [] }) medicalHistoryNote?: string[];
   @Prop({ type: [String], default: [] })
   medicalReports: string[];
   @Prop({ type: [String], default: [] })

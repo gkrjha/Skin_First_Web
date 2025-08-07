@@ -22,12 +22,6 @@ export class AuthController {
     return result;
   }
 
-  @Post('protected')
-  @UseGuards(JwtAuthGuard)
-  getProtected(@Request() req) {
-    return req.user;
-  }
-
   @Post('signup')
   async signup(@Body() dto: CreatePatientDto) {
     return this.authService.signup(dto);

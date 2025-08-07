@@ -2,131 +2,162 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
+  UploadedFiles,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Patient, PatientDocument } from 'src/Schema/patient.schema';
 import { UpdatePatientDto } from 'src/DOTS/UpdatePatient.dtos';
-import { CloudinaryService } from 'src/cloudinary/cloudinary.service'; // ✅ File upload service
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { GetUser } from 'src/auth/get-user.decorator';
+import { JwtUserPayload } from 'src/auth/auth.strategy';
 
 @Injectable()
 export class PatientService {
   constructor(
     @InjectModel(Patient.name)
-    private patientModel: Model<PatientDocument>, // ✅ MongoDB model injection
-    private cloudinaryService: CloudinaryService, // ✅ Custom cloudinary service
-    
+    private patientModel: Model<PatientDocument>,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
-  // ✅ 1. Find patient by email
   async findUserByEmail(email: string): Promise<PatientDocument | null> {
-    return this.patientModel.findOne({ email }); // ✅ Email se user fetch
+    return this.patientModel.findOne({ email });
   }
 
-  // ✅ 2. Update patient profile by ID
   async updatePatientById(id: string, data: UpdatePatientDto): Promise<any> {
     const updatedPatient = await this.patientModel.findByIdAndUpdate(id, data, {
-      new: true, // ✅ Updated patient return karega
-      runValidators: true, // ✅ Schema validation karega
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedPatient) {
-      throw new NotFoundException('Patient Not Found'); // ✅ Agar patient nahi mila
+      throw new NotFoundException('Patient Not Found');
     }
 
-    const { password, ...safeData } = updatedPatient.toObject(); // ✅ Password hide
+    const { password, ...safeData } = updatedPatient.toObject();
     return safeData;
   }
 
-  // ✅ 3. Find patient by ID
   async findPatientById(id: string): Promise<PatientDocument> {
     const user = await this.patientModel.findById(id);
     if (!user) {
-      throw new NotFoundException('Patient Not Found'); // ✅ ID invalid hai
+      throw new NotFoundException('Patient Not Found');
     }
     return user;
   }
 
-  // ✅ 4. Delete patient by ID
   async deletePatientById(id: string): Promise<any> {
     const user = await this.patientModel.findByIdAndDelete(id);
-    return user; // ✅ Deleted user return karega
+    return user;
   }
 
-  // ✅ 5. Get all patients
   async getAllUser(): Promise<PatientDocument[]> {
-    const users = await this.patientModel.find(); // ✅ Saare patients laao
+    const users = await this.patientModel.find();
     return users;
   }
 
-  // ✅ 6. Upload multiple Medical Reports (PDF/Image) to Cloudinary
-  async uploadMedicalReports(
-    id: string,
-    files: Express.Multer.File[],
-  ): Promise<any> {
-    const user = await this.patientModel.findById(id);
-    if (!user) throw new NotFoundException('Patient not found');
+  async uploadDocuments(
+    user: JwtUserPayload,
+    files: {
+      medicalHistory?: Express.Multer.File[];
+      medicalReports?: Express.Multer.File[];
+      insuranceCardImage?: Express.Multer.File[];
+    },
+  ) {
+    const patient = await this.patientModel.findById(user._id);
+    if (!patient) throw new NotFoundException('Patient not found');
 
-    // ✅ Saare files Cloudinary me upload karo
-    for (const file of files) {
-      const uploaded = await this.cloudinaryService.uploadFile(file); // ✅ Upload
-      if (!user.medicalReports) {
-        user.medicalReports = []; // ✅ Array initialize
+    const uploadMultiple = async (fileArray?: Express.Multer.File[]) => {
+      if (fileArray && fileArray.length > 0) {
+        const urls = await Promise.all(
+          fileArray.map((file) =>
+            this.cloudinaryService
+              .uploadFile(file)
+              .then((res) => res.secure_url),
+          ),
+        );
+        return urls;
       }
-      user.medicalReports.push(uploaded.secure_url); // ✅ URL push
-    }
+      return [];
+    };
 
-    await user.save(); // ✅ Save updated user
-    const { password, ...safeObj } = user.toObject(); // ✅ Hide password
-    return safeObj;
+    try {
+      const medicalHistoryUrls = await uploadMultiple(files.medicalHistory);
+      const medicalReportsUrls = await uploadMultiple(files.medicalReports);
+      const insuranceCardImageUrls = await uploadMultiple(
+        files.insuranceCardImage,
+      );
+
+      if (medicalHistoryUrls.length > 0) {
+        patient.medicalHistoryFiles.push(...medicalHistoryUrls);
+      }
+      if (medicalReportsUrls.length > 0) {
+        patient.medicalReports.push(...medicalReportsUrls);
+      }
+      if (insuranceCardImageUrls.length > 0) {
+        patient.insuranceCardImage.push(...insuranceCardImageUrls);
+      }
+
+      await patient.save();
+
+      const { password, ...safeUser } = patient.toObject();
+      return {
+        message: 'Documents uploaded successfully',
+        user: safeUser,
+      };
+    } catch (error) {
+      console.error('Upload or save error:', error);
+      throw new InternalServerErrorException('Failed to upload documents');
+    }
   }
 
-  // ✅ 7. Upload multiple Medical History files
-  async uploadMedicalHistoryFiles(
+  async deleteDocument(
     id: string,
-    files: Express.Multer.File[],
+    fileType: string,
+    fileUrl: string,
   ): Promise<any> {
-    const user = await this.patientModel.findById(id);
-    if (!user) throw new NotFoundException('Patient not found');
+    const patient = await this.patientModel.findById(id);
+    if (!patient) {
+      throw new NotFoundException('Patient not found');
+    }
+    console.log(fileType);
 
-    for (const file of files) {
-      const uploaded = await this.cloudinaryService.uploadFile(file);
-
-      if (!user.medicalHistoryFiles) {
-        user.medicalHistoryFiles = []; // ✅ Array initialize
-      }
-      user.medicalHistoryFiles.push(uploaded.secure_url);
+    let fileArray: string[];
+    switch (fileType) {
+      case 'medicalHistoryFiles':
+        fileArray = patient.medicalHistoryFiles;
+        console.log(fileArray.indexOf(fileUrl));
+        break;
+      case 'medicalReports':
+        fileArray = patient.medicalReports;
+        break;
+      case 'insuranceCardImage':
+        fileArray = patient.insuranceCardImage;
+        break;
+      default:
+        throw new BadRequestException('Invalid document type');
     }
 
-    await user.save();
-    const { password, ...safeObj } = user.toObject();
-    return safeObj;
-  }
-
-  // ✅ 8. Upload multiple Insurance Card Images (jpg, png, pdf)
-  async uploadInsuranceCards(
-    id: string,
-    files: Express.Multer.File[],
-  ): Promise<any> {
-    const user = await this.patientModel.findById(id);
-    if (!user) throw new NotFoundException('Patient not found');
-
-    if (!files || files.length === 0) {
-      throw new BadRequestException('No files provided'); // ✅ Validate files
+    const fileIndex = fileArray.indexOf(fileUrl);
+    if (fileIndex === -1) {
+      throw new NotFoundException(
+        'File not found in the specified document type',
+      );
     }
+    try {
+      fileArray.splice(fileIndex, 1);
+      await patient.save();
 
-    const uploadedUrls: string[] = [];
+      await this.cloudinaryService.deleteFile(fileUrl);
 
-    // ✅ Upload all files to Cloudinary
-    for (const file of files) {
-      const uploaded = await this.cloudinaryService.uploadFile(file);
-      uploadedUrls.push(uploaded.secure_url); // ✅ Store URL
+      return {
+        message: 'File deleted successfully',
+        user: patient,
+      };
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      throw new InternalServerErrorException('Failed to delete file');
     }
-
-    user.insuranceCardImage = uploadedUrls; // ✅ Update array field in DB
-    await user.save();
-
-    const { password, ...safeObj } = user.toObject();
-    return safeObj;
   }
 }

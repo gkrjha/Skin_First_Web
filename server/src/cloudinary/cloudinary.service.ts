@@ -22,4 +22,26 @@ export class CloudinaryService {
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
+
+  async deleteFile(fileUrl: string): Promise<void> {
+    const publicId = this.extractPublicId(fileUrl);
+    if (!publicId) {
+      throw new BadRequestException('Invalid file URL or public ID not found');
+    }
+
+    await cloudinary.uploader.destroy(publicId);
+  }
+
+  private extractPublicId(fileUrl: string): string | null {
+    try {
+      const url = new URL(fileUrl);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      const folder = pathParts[pathParts.length - 2];
+      const publicId = `${folder}/${fileName.split('.')[0]}`;
+      return publicId;
+    } catch {
+      return null;
+    }
+  }
 }

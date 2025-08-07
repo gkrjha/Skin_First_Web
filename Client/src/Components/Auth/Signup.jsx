@@ -3,7 +3,7 @@ import Doctor from "../../assets/Doctor.png";
 import Logo from "../../assets/Group 91.jpg";
 import { useForm } from "@tanstack/react-form";
 import { FaEye, FaEyeSlash } from "react-icons/fa6";
-
+import { useNavigate } from "react-router";
 const ErrorInfo = ({ field }) => (
   <>
     {field.state.meta.isTouched && !field.state.meta.isValid && (
@@ -16,7 +16,7 @@ const ErrorInfo = ({ field }) => (
 
 const Signup = () => {
   const [type, setType] = useState("password");
-
+  const Navigate = useNavigate();
   const form = useForm({
     defaultValues: {
       name: "",
@@ -34,7 +34,7 @@ const Signup = () => {
     <div className="flex flex-col md:flex-row min-h-screen">
       {/* Left Side - Form */}
       <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md shadow-md p-9">
           <div className="flex flex-col items-center gap-4 mb-6">
             <img src={Logo} alt="Logo" className="w-24 h-24 rounded-full" />
             <h1 className="text-2xl md:text-3xl font-semibold text-center text-primary">
@@ -121,8 +121,8 @@ const Signup = () => {
                   if (!value) return "Password is required";
                   if (value.length < 6) return "At least 6 characters";
                   const specialCharRegex = /[^\w\s]/;
-                  if (specialCharRegex.test(value))
-                    return "No special symbols allowed";
+                  if (!specialCharRegex.test(value))
+                    return "special symbols Required";
                   return undefined;
                 },
               }}
@@ -228,7 +228,7 @@ const Signup = () => {
           {/* Already have an account */}
           <p className="text-sm mt-4 text-center">
             Already have an account?{" "}
-            <span className="text-primary font-semibold cursor-pointer">
+            <span className="text-primary font-semibold cursor-pointer" onClick={()=>Navigate("/login-user")}>
               Login
             </span>
           </p>

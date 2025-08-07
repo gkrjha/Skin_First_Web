@@ -7,74 +7,76 @@ import {
   Patch,
   Get,
   UseGuards,
+  Query,
   Delete,
   BadRequestException,
   UploadedFiles,
-  UploadedFile,
   UseInterceptors,
   ForbiddenException,
   Request,
+  NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 
 import { PatientService } from './patient.service';
 import { UpdatePatientDto } from 'src/DOTS/UpdatePatient.dtos';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/get-user.decorator';
-import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Patient } from 'src/Schema/patient.schema';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { CreatePatientDto } from 'src/DOTS/Patient.dtos';
 
-// ✅ Interface to represent JWT user payload
+// ✅ JWT user payload interface
 interface JwtUserPayload {
   _id: string;
   email: string;
   role: string;
 }
 
-// ------------------------------------------------------------------------------------------------
-
-@Controller('patient') // ✅ All routes start with /patient
+@Controller('patient')
 export class PatientController {
-  constructor(private readonly patientService: PatientService) {}
+  constructor(
+    private readonly patientService: PatientService,
+    private readonly cloudinaryService: CloudinaryService,
+    private jwtService: JwtService,
+    @InjectModel(Patient.name) private readonly patientModel: Model<Patient>,
+  ) {}
 
-  // ✅ 1. Update patient profile by ID (PUT)
   @Put('update-patient/:id')
   async updatePatient(
-    @Param('id') id: string, // ✅ URL se patient id le rahe ho
-    @Body() updatePatientDto: UpdatePatientDto, // ✅ Body se updated data
+    @Param('id') id: string,
+    @Body() updatePatientDto: UpdatePatientDto,
   ) {
     return this.patientService.updatePatientById(id, updatePatientDto);
   }
 
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 2. Get patient by ID – Protected route with JWT
   @UseGuards(AuthGuard('jwt'))
   @Get('get-user/:id')
-  async getuserById(@Param('id') id: string) {
+  async getUserById(@Param('id') id: string) {
     const user = await this.patientService.findPatientById(id);
     return user;
   }
 
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 3. Get patient profile using JWT token
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   async getProfile(@GetUser() user: JwtUserPayload) {
+    console.log(user);
+
     const fullUser = await this.patientService.findPatientById(user._id);
     return fullUser;
   }
 
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 4. Delete patient by ID – Protected route
   @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
   async deletePatientById(@Param('id') id: string, @Request() req) {
-    const loggedInUser = req.user; // JWT se user extract hua
+    const loggedInUser = req.user;
     const { role, sub: userId } = loggedInUser;
 
-    // ✅ Check kar rahe hai ki user admin hai ya same patient
     if (role !== 'admin' && userId !== id) {
       throw new ForbiddenException(
         'You are not allowed to delete this patient',
@@ -85,79 +87,50 @@ export class PatientController {
     return user;
   }
 
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 5. Upload Multiple Medical Reports to Cloudinary
   @UseGuards(AuthGuard('jwt'))
-  @Put('upload-reports/:id')
+  @Patch('upload-all')
   @UseInterceptors(
-    FilesInterceptor('files', 5, {
-      // ✅ Up to 5 files allowed with key 'files'
-      storage: memoryStorage(), // ✅ Files stored in memory (RAM) not disk
-      limits: { fileSize: 5 * 1024 * 1024 }, // ✅ Max 5MB per file
-    }),
-  )
-  async uploadReports(
-    @Param('id') id: string,
-    @UploadedFiles() files: Express.Multer.File[], // ✅ Handle multiple files
-  ) {
-    if (!files || files.length === 0)
-      throw new BadRequestException('No files uploaded'); // ✅ Validation
-
-    const updatedUser = await this.patientService.uploadMedicalReports(
-      id,
-      files,
-    );
-    return { message: 'Reports uploaded', user: updatedUser };
-  }
-
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 6. Upload Medical History Files to Cloudinary
-  @UseGuards(AuthGuard('jwt'))
-  @Post('upload-history/:id')
-  @UseInterceptors(
-    FilesInterceptor('files', 5, {
-      storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    }),
-  )
-  async uploadHistory(
-    @Param('id') id: string,
-    @UploadedFiles() files: Express.Multer.File[],
-  ) {
-    if (!files || files.length === 0)
-      throw new BadRequestException('No files uploaded');
-
-    const updatedUser = await this.patientService.uploadMedicalHistoryFiles(
-      id,
-      files,
-    );
-    return { message: 'History files uploaded', user: updatedUser };
-  }
-
-  // ------------------------------------------------------------------------------------------------
-
-  // ✅ 7. Upload Insurance Card Files to Cloudinary (multiple allowed)
-  @UseGuards(AuthGuard('jwt'))
-  @Patch('upload-insurance/:id')
-  @UseInterceptors(
-    FilesInterceptor('files', 5, {
-      limits: { fileSize: 5 * 1024 * 1024 }, // ✅ Max 5MB
-      fileFilter: (req, file, cb) => {
-        // ✅ Allow only jpg, jpeg, png, pdf files
-        if (file.mimetype.match(/\/(jpg|jpeg|png|pdf|mp4)$/)) {
-          cb(null, true);
-        } else {
-          cb(new Error('Only images and PDFs are allowed!'), false);
-        }
+    FileFieldsInterceptor(
+      [
+        { name: 'medicalHistory', maxCount: 5 },
+        { name: 'medicalReports', maxCount: 5 },
+        { name: 'insuranceCardImage', maxCount: 5 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+        fileFilter: (req, file, cb) => {
+          if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
+            cb(null, true);
+          } else {
+            cb(new Error('Only images and PDFs are allowed!'), false);
+          }
+        },
       },
-    }),
+    ),
   )
-  async uploadInsuranceFiles(
-    @Param('id') id: string,
-    @UploadedFiles() files: Express.Multer.File[],
+  async uploadDocuments(
+    @UploadedFiles()
+    files: {
+      medicalHistory?: Express.Multer.File[];
+      medicalReports?: Express.Multer.File[];
+      insuranceCardImage?: Express.Multer.File[];
+    },
+    @GetUser() user: JwtUserPayload,
   ) {
-    return this.patientService.uploadInsuranceCards(id, files);
+    return this.patientService.uploadDocuments(user, files);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('delete-file')
+  async deleteFile(
+    @Query('fileUrl') fileUrl: string,
+    @Query('fileType')
+    fileType: 'medicalHistoryFiles' | 'medicalReports' | 'insuranceCardImage',
+    @GetUser() user: JwtUserPayload,
+  ) {
+    console.log(fileType);
+    
+    return this.patientService.deleteDocument(user._id, fileType, fileUrl);
   }
 }

@@ -7,7 +7,6 @@ import {
   IsUrl,
   IsOptional,
 } from 'class-validator';
-
 export class CreateDoctorDto {
   @IsString() name: string;
   @IsEmail() email: string;
@@ -18,15 +17,19 @@ export class CreateDoctorDto {
   @IsString() experience: string;
   @IsString() focus: string;
   @IsString() rating: string;
-  @IsUrl() profileImage: string;
-  @IsUrl() licence: string;
-  @IsArray() @IsUrl({}, { each: true }) documents: string[];
-  @IsOptional() @IsArray() @IsUrl({}, { each: true }) clinicImages?: string[];
+
+  @IsOptional() @IsUrl() profileImage?: string;
+  @IsOptional() @IsUrl() licence?: string;
   @IsOptional() @IsUrl() signatureImage?: string;
+  @IsOptional() @IsArray() @IsUrl({}, { each: true }) documents?: string[];
+  @IsOptional() @IsArray() @IsUrl({}, { each: true }) clinicImages?: string[];
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
   certificateImages?: string[];
+
+  
+
   @IsOptional() @IsString() gender?: string;
   @IsOptional() @IsString() dob?: string;
   @IsOptional() @IsString() profile?: string;

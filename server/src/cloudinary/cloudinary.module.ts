@@ -4,6 +4,6 @@ import { CloudinaryService } from './cloudinary.service'; // ✅ actual service
 
 @Module({
   providers: [CloudinaryProvider, CloudinaryService],
-  exports: [CloudinaryService], // ✅ Only CloudinaryService used by other modules
+  exports: [CloudinaryService],
 })
 export class CloudinaryModule {}

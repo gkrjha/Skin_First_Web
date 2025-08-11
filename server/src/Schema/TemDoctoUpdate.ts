@@ -1,14 +1,38 @@
 import { Schema, SchemaFactory, Prop } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { Doctor } from './doctor.schema';
 
-export type tempdoctordoc = tempupdate & Document;
+export type TempDoctorDocument = TempDoctor & Document;
 
-@Schema()
-export class tempupdate {
-  @Prop() specialization: string;
-  @Prop({ type: Number, default: 0 }) experience: number;
-  @Prop() licence: string;
-  @Prop({ type: [String], default: [] }) documents: string[];
-  @Prop() signatureImage?: string;
-  @Prop({ type: [String], default: [] }) certificateImages?: string[];
+@Schema({ timestamps: true })
+export class TempDoctor {
+  @Prop({ type: Types.ObjectId, ref: 'Doctor', required: true })
+  doctorId: Doctor | Types.ObjectId;
+
+  @Prop({ type: String, default: null })
+  specialization?: string;
+
+  @Prop({ type: Number, default: null })
+  experience?: number;
+
+  @Prop({ type: String, default: null })
+  licence?: string;
+
+  @Prop({ type: [String], default: null })
+  documents?: string[];
+
+  @Prop({ type: String, default: null })
+  signatureImage?: string;
+
+  @Prop({ type: [String], default: null })
+  certificateImages?: string[];
+
+  @Prop({
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  })
+  status: 'pending' | 'approved' | 'rejected';
 }
+
+export const TempDoctorSchema = SchemaFactory.createForClass(TempDoctor);

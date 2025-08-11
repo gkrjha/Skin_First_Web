@@ -6,16 +6,19 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateDoctorDto } from 'src/DOTS/Doctors.dtos';
 import { Doctor, DoctorDocument } from 'src/Schema/doctor.schema';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import * as bcrypt from 'bcryptjs';
 import { JwtUserPayload } from 'src/auth/auth.strategy';
+import { TempDoctor, TempDoctorDocument } from 'src/Schema/TemDoctoUpdate';
 @Injectable()
 export class DoctorService {
   constructor(
     @InjectModel(Doctor.name) private doctorModel: Model<DoctorDocument>,
+    @InjectModel(TempDoctor.name)
+    private tempDoctorModel: Model<TempDoctorDocument>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
@@ -221,5 +224,122 @@ export class DoctorService {
     return safeData;
   }
 
-  
+  async updateDoctorDocument(
+    doctorId: string,
+    files: {
+      licence?: Express.Multer.File[];
+      signatureImage?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+      certificateImages?: Express.Multer.File[];
+    },
+    body: {
+      specialization?: string;
+      experience?: number;
+    },
+  ) {
+    const doctor = await this.doctorModel.findById(doctorId);
+    if (!doctor) throw new NotFoundException('Doctor not found');
+
+    let tempDoctor = await this.tempDoctorModel.findOne({
+      doctorId: doctor._id,
+    });
+    if (!tempDoctor) {
+      tempDoctor = new this.tempDoctorModel({ doctorId: doctor._id });
+    }
+
+    const uploadSingle = async (
+      file?: Express.Multer.File[],
+    ): Promise<string> =>
+      file?.[0]
+        ? (await this.cloudinaryService.uploadFile(file[0])).secure_url
+        : '';
+
+    const uploadMultiple = async (
+      fileArray?: Express.Multer.File[],
+    ): Promise<string[]> => {
+      if (fileArray && fileArray.length > 0) {
+        return Promise.all(
+          fileArray.map((file) =>
+            this.cloudinaryService
+              .uploadFile(file)
+              .then((res) => res.secure_url),
+          ),
+        );
+      }
+      return [];
+    };
+
+    try {
+      if (body.specialization) {
+        tempDoctor.specialization = body.specialization;
+      }
+      if (body.experience !== undefined) {
+        tempDoctor.experience = body.experience;
+      }
+
+      if (files.licence) {
+        tempDoctor.licence = await uploadSingle(files.licence);
+      }
+      if (files.signatureImage) {
+        tempDoctor.signatureImage = await uploadSingle(files.signatureImage);
+      }
+
+      const documentUrls = await uploadMultiple(files.documents);
+      if (documentUrls.length > 0) {
+        tempDoctor.documents = tempDoctor.documents || [];
+        tempDoctor.documents.push(...documentUrls);
+      }
+
+      const certificateUrls = await uploadMultiple(files.certificateImages);
+      if (certificateUrls.length > 0) {
+        tempDoctor.certificateImages = tempDoctor.certificateImages || [];
+        tempDoctor.certificateImages.push(...certificateUrls);
+      }
+
+      await tempDoctor.save();
+
+      return {
+        message:
+          'Documents and details uploaded to temp storage. Awaiting approval.',
+        tempDoctor,
+      };
+    } catch (error) {
+      console.error('Upload or save error:', error);
+      throw new InternalServerErrorException('Failed to upload documents');
+    }
+  }
+
+  async approveDoctorDocuments(doctorId: string) {
+    console.log('Approving documents for doctor:', doctorId);
+
+    const tempDoctor = await this.tempDoctorModel.findOne({
+      doctorId: new Types.ObjectId(doctorId),
+    });
+    console.log('Temp doctor data:', tempDoctor);
+
+    if (!tempDoctor)
+      throw new NotFoundException('No documents found to approve');
+
+    const doctor = await this.doctorModel.findById(doctorId);
+    if (!doctor) throw new NotFoundException('Doctor not found');
+
+    if (tempDoctor.licence) doctor.licence = tempDoctor.licence;
+    if (tempDoctor.signatureImage)
+      doctor.signatureImage = tempDoctor.signatureImage;
+    if (tempDoctor.documents?.length) {
+      doctor.documents = doctor.documents || [];
+      doctor.documents.push(...tempDoctor.documents);
+    }
+    if (tempDoctor.certificateImages?.length) {
+      doctor.certificateImages = doctor.certificateImages || [];
+      doctor.certificateImages.push(...tempDoctor.certificateImages);
+    }
+
+    await doctor.save();
+    await this.tempDoctorModel.deleteOne({
+      doctorId: new Types.ObjectId(doctorId),
+    });
+
+    return { message: 'Doctor documents approved successfully', doctor };
+  }
 }

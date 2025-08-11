@@ -7,6 +7,7 @@ import {
   Get,
   Request,
   UseGuards,
+  Patch,
   Param,
   UseInterceptors,
   UploadedFiles,
@@ -20,6 +21,14 @@ import {
   FileFieldsInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
+import { GetUser } from 'src/auth/get-user.decorator';
+import { JwtPayload } from 'jsonwebtoken';
+
+interface JwtUserPayload {
+  _id: string;
+  email: string;
+  role: string;
+}
 
 @Controller('doctor')
 export class DoctorController {
@@ -28,7 +37,6 @@ export class DoctorController {
     private doctorService: DoctorService,
   ) {}
 
-  
   @Post('register')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -120,7 +128,6 @@ export class DoctorController {
     return doctor;
   }
 
-  
   @Put('update-status/:id')
   @UseGuards(AuthGuard('jwt'))
   async updateDoctorStatus(
@@ -138,5 +145,52 @@ export class DoctorController {
     }
 
     return this.doctorService.updateDoctorStatus(id, status);
+  }
+
+  @Patch('update-documents')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'licence', maxCount: 1 },
+      { name: 'signatureImage', maxCount: 1 },
+      { name: 'documents', maxCount: 10 },
+      { name: 'certificateImages', maxCount: 10 },
+    ]),
+  )
+  async updateDoctorDocuments(
+    @Request() req,
+    @Body() body: { specialization?: string; experience?: number },
+  ) {
+    const loggedInUser = req.user;
+    console.log('Logged in user:', loggedInUser);
+
+    const { _id, role } = loggedInUser;
+
+    if (role !== 'doctor') {
+      throw new BadRequestException(
+        'You are not allowed to update this doctor documents',
+      );
+    }
+
+    const files = req.files;
+    if (!files) {
+      throw new BadRequestException('No files provided for update');
+    }
+
+    return this.doctorService.updateDoctorDocument(_id, files, body);
+  }
+  
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('approve-documents/:id')
+  async approveDoctorDocuments(
+    @GetUser() user: JwtUserPayload,
+    @Param('id') id: string,
+  ) {
+    console.log('User attempting to approve documents:', user);
+
+    if (user.role !== 'admin') {
+      throw new BadRequestException('Unauthorized access');
+    }
+    return this.doctorService.approveDoctorDocuments(id);
   }
 }

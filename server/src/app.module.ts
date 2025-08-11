@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { MailerModule } from './mailer/mailer.module';
 // import { SmsModule } from './sms/sms.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { JwtModule } from '@nestjs/jwt';
     CloudinaryModule,
     AdminModule,
     MailerModule,
+    ChatModule,
     // SmsModule,
   ],
   controllers: [AppController],

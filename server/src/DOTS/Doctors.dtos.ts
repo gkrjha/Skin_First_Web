@@ -12,11 +12,11 @@ export class CreateDoctorDto {
   @IsEmail() email: string;
   @IsString() @MinLength(6) password: string;
   @IsString() phone: string;
-  @IsEnum(['doctor']) role: 'doctor';
+
   @IsString() specialization: string;
   @IsString() experience: string;
-  @IsString() focus: string;
-  @IsString() rating: string;
+  @IsOptional() @IsString() focus: string;
+  @IsOptional() @IsString() rating: string;
 
   @IsOptional() @IsUrl() profileImage?: string;
   @IsOptional() @IsUrl() licence?: string;
@@ -27,8 +27,6 @@ export class CreateDoctorDto {
   @IsArray()
   @IsUrl({}, { each: true })
   certificateImages?: string[];
-
-  
 
   @IsOptional() @IsString() gender?: string;
   @IsOptional() @IsString() dob?: string;

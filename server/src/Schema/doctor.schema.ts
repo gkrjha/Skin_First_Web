@@ -25,7 +25,10 @@ export class Doctor {
   @Prop() profile?: string;
   @Prop() careerPath?: string;
   @Prop() highlight?: string;
-  @Prop({ default: 'pending', enum: ['pending', 'approved', 'declined'] })
+  @Prop({
+    default: 'pending',
+    enum: ['pending', 'approved', 'update', 'declined'],
+  })
   status: 'pending' | 'approved' | 'declined';
 }
 

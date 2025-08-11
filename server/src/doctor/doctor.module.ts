@@ -6,10 +6,12 @@ import { Doctor, DoctorSchema } from 'src/Schema/doctor.schema';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TempDoctor, TempDoctorSchema } from 'src/Schema/TemDoctoUpdate';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Doctor.name, schema: DoctorSchema }]),
+    MongooseModule.forFeature([{ name: TempDoctor.name, schema: TempDoctorSchema }]),
     CloudinaryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

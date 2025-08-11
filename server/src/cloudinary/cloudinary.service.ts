@@ -1,6 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 @Injectable()
 export class CloudinaryService {

@@ -31,7 +31,6 @@ import { Patient } from 'src/Schema/patient.schema';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { CreatePatientDto } from 'src/DOTS/Patient.dtos';
 
-// ✅ JWT user payload interface
 interface JwtUserPayload {
   _id: string;
   email: string;

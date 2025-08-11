@@ -3,11 +3,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   Conversation,
   ConversationSchema,
-} from '../Schema/Conversaction.schema'
+} from '../Schema/Conversaction.schema';
 import { Message, MessageSchema } from '../Schema/message.schema';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { ChatGateway } from './chat.gateway';
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
     ]),
+    CloudinaryModule,
+    JwtModule.register({}),
   ],
   providers: [ChatService, ChatGateway],
   controllers: [ChatController],

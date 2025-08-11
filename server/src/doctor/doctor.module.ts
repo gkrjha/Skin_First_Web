@@ -7,11 +7,16 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TempDoctor, TempDoctorSchema } from 'src/Schema/TemDoctoUpdate';
+import { MailerModule } from 'src/mailer/mailer.module';
+// import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Doctor.name, schema: DoctorSchema }]),
-    MongooseModule.forFeature([{ name: TempDoctor.name, schema: TempDoctorSchema }]),
+    MongooseModule.forFeature([
+      { name: TempDoctor.name, schema: TempDoctorSchema },
+    ]),
+    MailerModule,
     CloudinaryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -44,7 +44,7 @@ export class ChatGateway
 
   @SubscribeMessage('message')
   async handleMessage(client: Socket, payload: any) {
-    const msg = await this.chatService.sendMessage(payload);
+    const msg = await this.chatService.getOrCreateConversationasync(payload);
     this.server.to(payload.conversation).emit('message', msg);
     return { status: 'ok' };
   }

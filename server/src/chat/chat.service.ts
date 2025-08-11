@@ -11,50 +11,59 @@ export class ChatService {
     @InjectModel(Message.name) private msgModel: Model<Message>,
   ) {}
 
-  async getOrCreateConversation(doctorId: string, patientId: string) {
-    let conv = await this.convModel.findOne({
-      doctor: doctorId,
-      patient: patientId,
-    });
-    if (!conv) {
-      conv = await this.convModel.create({
-        doctor: doctorId,
-        patient: patientId,
+  async getOrCreateConversationasync(data: {
+    conversation?: string;
+    doctor?: string;
+    patient?: string;
+    sender: string;
+    senderModel: 'Doctor' | 'Patient';
+    text?: string;
+    attachments?: { url: string; type: string; filename?: string }[];
+  }) {
+    let conv;
+
+    if (data.conversation) {
+      conv = await this.convModel.findById(data.conversation);
+    } else if (data.doctor && data.patient) {
+      conv = await this.convModel.findOne({
+        doctor: data.doctor,
+        patient: data.patient,
       });
+
+      if (!conv) {
+        conv = await this.convModel.create({
+          doctor: data.doctor,
+          patient: data.patient,
+        });
+      }
     }
-    return conv;
+
+    if (!conv) {
+      throw new NotFoundException(
+        'Conversation not found and insufficient info to create one.',
+      );
+    }
+
+    const msg = await this.msgModel.create({
+      conversation: conv._id,
+      sender: new Types.ObjectId(data.sender),
+      senderModel: data.senderModel,
+      text: data.text || undefined,
+      attachments: data.attachments || [],
+    });
+
+    conv.messages.push(msg._id);
+    conv.lastMessage =
+      data.text || data.attachments?.[0]?.filename || undefined;
+    conv.lastMessageAt = new Date();
+    await conv.save();
+
+    return msg;
   }
 
   async getConversationById(id: string) {
     const conv = await this.convModel.findById(id).populate('messages');
     if (!conv) throw new NotFoundException('Conversation not found');
     return conv;
-  }
-
-  async sendMessage(data: {
-    conversation: string;
-    sender: string;
-    senderModel: 'Doctor' | 'Patient';
-    text?: string;
-    attachments?: { url: string; type: string; filename?: string }[];
-  }) {
-    const conv = await this.convModel.findById(data.conversation);
-    if (!conv) throw new NotFoundException('Conversation not found');
-
-    const msg = await this.msgModel.create({
-      conversation: conv._id,
-      sender: new Types.ObjectId(data.sender),
-      senderModel: data.senderModel,
-      text: data.text || null,
-      attachments: data.attachments || [],
-    });
-
-    conv.messages.push(msg._id as Types.ObjectId);
-    conv.lastMessage =
-      data.text || (data.attachments && data.attachments[0]?.filename) || null;
-    conv.lastMessageAt = new Date();
-    await conv.save();
-
-    return msg;
   }
 }

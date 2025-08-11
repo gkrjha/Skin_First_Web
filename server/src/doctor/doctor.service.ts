@@ -147,6 +147,7 @@ export class DoctorService {
     }
 
     doctor.status = status;
+   
     const updatedDoctor = await doctor.save();
     if (!updatedDoctor) {
       throw new InternalServerErrorException('Failed to update doctor status');

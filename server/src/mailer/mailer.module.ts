@@ -31,6 +31,6 @@ import { join } from 'path';
     }),
   ],
   providers: [MailerService],
-  exports: [MailerService], // ✅ Export it for AdminModule
+  exports: [MailerService], 
 })
 export class MailerModule {}

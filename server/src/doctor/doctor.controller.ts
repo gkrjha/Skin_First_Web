@@ -23,6 +23,7 @@ import {
 } from '@nestjs/platform-express';
 import { GetUser } from 'src/auth/get-user.decorator';
 import { JwtPayload } from 'jsonwebtoken';
+import { MailerService } from 'src/mailer/mailer.service';
 
 interface JwtUserPayload {
   _id: string;
@@ -35,6 +36,7 @@ export class DoctorController {
   constructor(
     private jwtService: JwtService,
     private doctorService: DoctorService,
+    private MailerService: MailerService,
   ) {}
 
   @Post('register')
@@ -143,8 +145,18 @@ export class DoctorController {
         'You are not allowed to update this doctor status',
       );
     }
-
-    return this.doctorService.updateDoctorStatus(id, status);
+    const Currentstatus = this.doctorService.updateDoctorStatus(id, status);
+    const doctor = await this.doctorService.getDoctorById(id);
+    if (status === 'approved') {
+      let subject = 'Your Doctor Account has been Approved';
+      let message = `Congratulations! Your doctor account has been approved. You can now start using the platform.`;
+      this.MailerService.sendEmail(doctor.email, message, subject);
+    } else if (status === 'declined') {
+      let subject = 'Your Doctor Account has been Declined';
+      let message = `We regret to inform you that your doctor account application has been declined. If you have any questions, please contact support.`;
+      this.MailerService.sendEmail(doctor.email, message, subject);
+    }
+    return Currentstatus;
   }
 
   @Patch('update-documents')
@@ -179,7 +191,7 @@ export class DoctorController {
 
     return this.doctorService.updateDoctorDocument(_id, files, body);
   }
-  
+
   @UseGuards(AuthGuard('jwt'))
   @Patch('approve-documents/:id')
   async approveDoctorDocuments(

@@ -1,30 +1,39 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Schema, Document, Types } from 'mongoose';
 
-export type AppointmentDocument = Appointment & Document;
-
-@Schema({ timestamps: true })
-export class Appointment {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+export interface AppointmentDocument extends Document {
   doctor: Types.ObjectId;
-
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   patient: Types.ObjectId;
-
-  @Prop({ required: true })
   date: Date;
-
-  @Prop({ required: true })
   timeSlot: string;
-
-  @Prop({
-    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
-    default: 'pending',
-  })
-  status: string;
-
-  @Prop()
+  status?: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  attachments?: Array<{
+    url: string;
+    type: 'image' | 'pdf' | 'video' | 'audio';
+    filename?: string;
+  }>;
 }
 
-export const AppointmentSchema = SchemaFactory.createForClass(Appointment);
+export const AppointmentSchema = new Schema<AppointmentDocument>({
+  doctor: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true },
+  patient: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
+  date: { type: Date, required: true },
+  timeSlot: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    default: 'pending',
+  },
+  notes: { type: String },
+  attachments: [
+    {
+      url: { type: String, required: true },
+      type: {
+        type: String,
+        enum: ['image', 'pdf', 'video', 'audio'],
+        required: true,
+      },
+      filename: String,
+    },
+  ],
+});

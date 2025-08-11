@@ -2,18 +2,27 @@
 import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
 
 export class SendMessageDto {
+  @IsOptional()
   @IsString()
-  conversation: string; // Conversation ID
-
-  @IsString()
-  sender: string; // User ID
-
-  @IsString()
-  senderModel: 'Doctor' | 'Patient'; // For polymorphic sender type
+  conversation?: string; // Conversation ID (optional agar new create karna ho)
 
   @IsOptional()
   @IsString()
-  text?: string; // Optional text
+  doctor?: string; // Doctor ID (conversation create ke liye)
+
+  @IsOptional()
+  @IsString()
+  patient?: string; // Patient ID (conversation create ke liye)
+
+  @IsString()
+  sender: string; // Sender ID (jo message bhej raha hai)
+
+  @IsEnum(['Doctor', 'Patient'])
+  senderModel: 'Doctor' | 'Patient'; // Sender type
+
+  @IsOptional()
+  @IsString()
+  text?: string; // Optional text message
 
   @IsOptional()
   @IsArray()

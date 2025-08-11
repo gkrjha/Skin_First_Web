@@ -6,12 +6,11 @@ import { MailerService as DefaultMailerService } from '@nestjs-modules/mailer';
 export class MailerService {
   constructor(private readonly mailerService: DefaultMailerService) {}
 
-  async sendInvite(email: string, inviteLink: string) {
+  async sendEmail(email: string, message: string, subject: string) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'Doctor Registration Invite',
-      text: `You have been invited to register. Click here: ${inviteLink}`,
-      html: `<p>You have been invited to register. Click <a href="${inviteLink}">here</a> to complete your registration.</p>`,
+      subject: subject,
+      text: message,
     });
   }
 }

@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsEmail,
@@ -6,6 +7,7 @@ import {
   IsArray,
   IsUrl,
   IsOptional,
+  IsNumber,
 } from 'class-validator';
 export class CreateDoctorDto {
   @IsString() name: string;
@@ -14,9 +16,16 @@ export class CreateDoctorDto {
   @IsString() phone: string;
 
   @IsString() specialization: string;
-  @IsString() experience: string;
+
   @IsOptional() @IsString() focus: string;
-  @IsOptional() @IsString() rating: string;
+  @IsNumber()
+  @Type(() => Number)
+  experience: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  rating: number;
 
   @IsOptional() @IsUrl() profileImage?: string;
   @IsOptional() @IsUrl() licence?: string;
@@ -27,10 +36,9 @@ export class CreateDoctorDto {
   @IsArray()
   @IsUrl({}, { each: true })
   certificateImages?: string[];
-
   @IsOptional() @IsString() gender?: string;
   @IsOptional() @IsString() dob?: string;
-  @IsOptional() @IsString() profile?: string;
+  @IsOptional() @IsString() profile: string;
   @IsOptional() @IsString() careerPath?: string;
   @IsOptional() @IsString() highlight?: string;
 }

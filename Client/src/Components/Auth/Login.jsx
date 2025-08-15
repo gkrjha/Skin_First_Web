@@ -3,14 +3,9 @@ import Doctor from "../../assets/Doctor.png";
 import Logo from "../../assets/Group 91.jpg";
 import { useNavigate } from "react-router";
 import { useForm } from "@tanstack/react-form";
-import {
-  FaApple,
-  FaEye,
-  FaEyeSlash,
-  FaFacebookF,
-  FaGoogle,
-} from "react-icons/fa6";
+import { FaApple, FaEye, FaEyeSlash, FaFacebookF, FaGoogle } from "react-icons/fa6";
 import SplashScreen from "../SplashScreen";
+import axios from "axios";
 
 const ErrorInfo = ({ field }) => (
   <>
@@ -27,7 +22,8 @@ const Login = () => {
   const [type, setType] = useState("password");
   const [loading, setLoading] = useState(false);
   const [splash, setSplash] = useState(false);
-  const Navigate = useNavigate();
+  const navigate = useNavigate();
+
   const form = useForm({
     defaultValues: {
       email: "",
@@ -36,10 +32,25 @@ const Login = () => {
     onSubmit: async ({ value }) => {
       setLoading(true);
       try {
-        console.log("Submitted values:", value);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("Login data:", value);
+        const res = await axios.post(
+          "http://localhost:3000/auth/login",
+          value,
+          { withCredentials: true }
+        );
+
+        localStorage.setItem("token", res.data.token);
+        alert("Login successful!");
+        if(res.data.user.role === "admin") {
+          navigate("/admin/dashboard");
+        }
+        else if(res.data.user.role === "doctor") {
+          navigate("/doctor/dashboard");
+        }
+        // navigate("/dashboard");
       } catch (err) {
         console.error("Login failed:", err);
+        alert(err.response?.data?.message || "Login failed");
       } finally {
         setLoading(false);
       }
@@ -48,7 +59,6 @@ const Login = () => {
 
   return (
     <div className="relative flex flex-col md:flex-row min-h-screen">
-      {/* Toggle Splash Button */}
       <button
         onClick={() => setSplash((prev) => !prev)}
         className={`absolute z-50 text-2xl top-4 right-4 font-bold ${
@@ -58,12 +68,10 @@ const Login = () => {
         {splash ? "Hide Splash" : "Show Splash"}
       </button>
 
-      {/* Splash Screen or Login Form */}
       {splash ? (
         <SplashScreen onClick={() => setSplash(false)} />
       ) : (
         <>
-          {/* Left Side - Form */}
           <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-6">
             <div className="w-full max-w-md shadow-md p-9 rounded-lg">
               <div className="flex flex-col items-center gap-4 mb-6">
@@ -74,7 +82,6 @@ const Login = () => {
                 <p className="text-xl font-bold text-primary">Login</p>
               </div>
 
-              {/* Form */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -82,7 +89,6 @@ const Login = () => {
                 }}
                 className="space-y-5"
               >
-                {/* Email */}
                 {form.Field({
                   name: "email",
                   validators: {
@@ -112,7 +118,6 @@ const Login = () => {
                   ),
                 })}
 
-                {/* Password */}
                 {form.Field({
                   name: "password",
                   validators: {
@@ -151,7 +156,10 @@ const Login = () => {
                         {type === "password" ? <FaEye /> : <FaEyeSlash />}
                       </span>
                       <ErrorInfo field={field} />
-                      <div className="flex justify-end mt-1" onClick={()=>Navigate("/set-password")}>
+                      <div
+                        className="flex justify-end mt-1"
+                        onClick={() => navigate("/set-password")}
+                      >
                         <span className="text-sm text-blue-500 cursor-pointer">
                           Forgot password?
                         </span>
@@ -160,7 +168,6 @@ const Login = () => {
                   ),
                 })}
 
-                {/* Submit */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -171,35 +178,9 @@ const Login = () => {
                   {loading ? "Logging in..." : "Login"}
                 </button>
               </form>
-
-              {/* Social Login */}
-              <div className="flex flex-col mt-6 items-center">
-                <h1 className="text-sm mb-2">Or login with</h1>
-                <div className="flex justify-center gap-4">
-                  <span className="bg-secondary p-3 rounded-full cursor-pointer">
-                    <FaGoogle className="text-primary text-lg" />
-                  </span>
-                  <span className="bg-secondary p-3 rounded-full cursor-pointer">
-                    <FaFacebookF className="text-primary text-lg" />
-                  </span>
-                  <span className="bg-secondary p-3 rounded-full cursor-pointer">
-                    <FaApple className="text-primary text-lg" />
-                  </span>
-                </div>
-                <p className="text-sm mt-4">
-                  Don’t have an account?{" "}
-                  <span
-                    className="text-primary font-semibold cursor-pointer"
-                    onClick={() => Navigate("/signup-user")}
-                  >
-                    Signup
-                  </span>
-                </p>
-              </div>
             </div>
           </div>
 
-          {/* Right Side Image */}
           <div className="hidden md:block w-full md:w-1/2">
             <img
               src={Doctor}

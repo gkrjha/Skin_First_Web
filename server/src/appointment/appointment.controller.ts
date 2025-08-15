@@ -74,4 +74,9 @@ export class AppointmentController {
   async remove(@Param('id') id: string): Promise<AppointmentDocument> {
     return this.appointmentService.deleteAppointment(id);
   }
+
+  @Get('appointments/count')
+  async countappointment() {
+    return this.appointmentService.countAppointment();
+  }
 }

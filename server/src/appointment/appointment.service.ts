@@ -95,4 +95,9 @@ export class AppointmentService {
 
     return deletedAppointment;
   }
+
+  async countAppointment() {
+    const response = await this.appointmentModel.countDocuments().exec();
+    return response;
+  }
 }

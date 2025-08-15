@@ -12,6 +12,12 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  
+  app.enableCors({
+    origin: 'http://localhost:5173', 
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, 
+  });
 
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,

@@ -45,17 +45,15 @@ export class AdminController {
 
     const payload = { invitedBy: req.user.id };
     const token = this.jwtService.sign(payload, { expiresIn: '1d' });
-    const inviteLink = `http://localhost:3000/doctor/register?token=${token}`;
+
+    const inviteLink = `http://localhost:5173/doctor/register?token=${encodeURIComponent(token)}`;
+
     const subject = 'You are invited to join our platform';
     const message = `You have been invited to join our platform. Click the link below to register:\n\n${inviteLink}`;
 
     if (body.email) {
       await this.mailerService.sendEmail(body.email, message, subject);
     }
-
-    // if (body.phone) {
-    //   await this.smsService.sendSms(body.phone, inviteLink);
-    // }
 
     return { message: 'Invite sent', inviteLink };
   }

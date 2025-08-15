@@ -25,26 +25,80 @@ export class PatientService {
     return this.patientModel.findOne({ email });
   }
 
-  async updatePatientById(id: string, data: UpdatePatientDto): Promise<any> {
-    const updatedPatient = await this.patientModel.findByIdAndUpdate(id, data, {
-      new: true,
-      runValidators: true,
-    });
+  async countpatient() {
+    const responst = await this.patientModel.countDocuments().exec();
+    return responst;
+  }
+  async updatePatientById(id: string, data: UpdatePatientDto) {
+    const updateOps: any = {};
 
-    if (!updatedPatient) {
-      throw new NotFoundException('Patient Not Found');
+    if (data.name) updateOps.$set = { ...updateOps.$set, name: data.name };
+    if (data.medicalHistoryNote) {
+      updateOps.$addToSet = {
+        ...updateOps.$addToSet,
+        medicalHistoryNote: { $each: data.medicalHistoryNote },
+      };
     }
+    if (data.medicalReports) {
+      updateOps.$push = {
+        ...updateOps.$push,
+        medicalReports: { $each: data.medicalReports },
+      };
+    }
+    if (data.medicalHistory) {
+      updateOps.$push = {
+        ...updateOps.$push,
+        medicalHistoryFiles: { $each: data.medicalHistory },
+      };
+    }
+    if (data.insuranceCardImage) {
+      updateOps.$push = {
+        ...updateOps.$push,
+        insuranceCardImage: { $each: data.insuranceCardImage },
+      };
+    }
+
+    const updatedPatient = await this.patientModel.findByIdAndUpdate(
+      id,
+      updateOps,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedPatient) throw new NotFoundException('Patient Not Found');
 
     const { password, ...safeData } = updatedPatient.toObject();
     return safeData;
   }
 
-  async findPatientById(id: string): Promise<PatientDocument> {
-    const user = await this.patientModel.findById(id);
-    if (!user) {
+  async findPatientById(
+    id: string,
+    user: JwtUserPayload,
+  ): Promise<PatientDocument> {
+    console.log(user);
+
+    if ((user.role !== 'admin' && user._id !== id) || user.role !== 'doctor') {
+      throw new BadRequestException(
+        'Access denied: Admins or own profile only',
+      );
+    }
+    const fetcheduser = await this.patientModel.findById(id);
+    if (!fetcheduser) {
       throw new NotFoundException('Patient Not Found');
     }
-    return user;
+    return fetcheduser;
+  }
+
+  async logeduser(id: string, user: JwtUserPayload): Promise<PatientDocument> {
+    console.log(user);
+
+    const fetcheduser = await this.patientModel.findById(id);
+    if (!fetcheduser) {
+      throw new NotFoundException('Patient Not Found');
+    }
+    return fetcheduser;
   }
 
   async deletePatientById(id: string): Promise<any> {
@@ -52,7 +106,10 @@ export class PatientService {
     return user;
   }
 
-  async getAllUser(): Promise<PatientDocument[]> {
+  async getAllUser(user: JwtUserPayload): Promise<PatientDocument[]> {
+    if (user.role !== 'admin') {
+      throw new BadRequestException('Access denied: Admins only');
+    }
     const users = await this.patientModel.find();
     return users;
   }
@@ -159,5 +216,10 @@ export class PatientService {
       console.error('Error deleting file:', error);
       throw new InternalServerErrorException('Failed to delete file');
     }
+  }
+
+  async recentpatient() {
+    const recent = await this.patientModel.find().sort({ createdAt: 1 }).limit(5);
+    return recent
   }
 }

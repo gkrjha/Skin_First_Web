@@ -39,6 +39,16 @@ export class DoctorController {
     private MailerService: MailerService,
   ) {}
 
+  @Get('verify-token')
+  async verifyToken(@Query('token') token: string) {
+    try {
+      const payload = this.jwtService.verify(token);
+      return { valid: true, payload };
+    } catch (e) {
+      return { valid: false, message: 'Invalid or expired token' };
+    }
+  }
+
   @Post('register')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -51,7 +61,7 @@ export class DoctorController {
         { name: 'certificateImages', maxCount: 10 },
       ],
       {
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+        limits: { fileSize: 5 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
           if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
             cb(null, true);
@@ -75,20 +85,26 @@ export class DoctorController {
       certificateImages?: Express.Multer.File[];
     },
   ) {
+    console.log(token);
+
+    if (!token) throw new BadRequestException('Missing invite token');
+
+    console.log('Received token:', token);
+
     let payload;
     try {
-      payload = this.jwtService.verify(token);
+      payload = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
       console.log('Decoded payload:', payload);
     } catch (err) {
-      console.error('Token verification error:', err.message);
-      throw new BadRequestException('Invalid or expired invite link');
+      if (err.name === 'TokenExpiredError') {
+        throw new BadRequestException('Invite link has expired');
+      }
+      throw new BadRequestException('Invalid invite token');
     }
 
-    return this.doctorService.createPendingDoctor(
-      dto,
-      payload.invitedBy,
-      files,
-    );
+    return this.doctorService.createPendingDoctor(dto, files);
   }
 
   @Get('filter')
@@ -96,17 +112,24 @@ export class DoctorController {
     const doctorExists = await this.doctorService.getllfiltereddoctor(query);
     return doctorExists;
   }
-  @Get('all')
+
+  @Get('getdoctor/all')
   @UseGuards(AuthGuard('jwt'))
   async getAllDoctors(@Request() req) {
     const role = req.user?.role;
     if (role !== 'admin' && role !== 'patient') {
       throw new BadRequestException('Unauthorized access');
     }
-
     const doctors = await this.doctorService.getAllDoctors();
     return doctors;
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('count')
+  async getDoctorCount() {
+    return this.doctorService.getDoctorCount();
+  }
+
   @Get(':id')
   async getDoctorById(@Param('id') id: string) {
     const doctor = await this.doctorService.getDoctorById(id);
@@ -115,6 +138,7 @@ export class DoctorController {
     }
     return doctor;
   }
+
   @Get('profile/:id')
   @UseGuards(AuthGuard('jwt'))
   async getDoctorProfile(@Param('id') id: string, @Request() req) {

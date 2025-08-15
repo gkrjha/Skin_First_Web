@@ -99,4 +99,13 @@ export class AuthService {
 
     return { token, user: userObj };
   }
+
+  private blacklistedTokens: string[] = [];
+  blacklistToken(token: string) {
+    this.blacklistedTokens.push(token);
+  }
+
+  isTokenBlacklisted(token: string): boolean {
+    return this.blacklistedTokens.includes(token);
+  }
 }

@@ -7,7 +7,7 @@ import { join } from 'path';
 
 @Module({
   imports: [
-    ConfigModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     NestMailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -22,15 +22,11 @@ import { join } from 'path';
         defaults: {
           from: `"SkinFirst" <${config.get<string>('EMAIL_USER')}>`,
         },
-        template: {
-          dir: join(__dirname, 'templates'),
-          adapter: new HandlebarsAdapter(),
-          options: { strict: true },
-        },
+        template: undefined
       }),
     }),
   ],
   providers: [MailerService],
-  exports: [MailerService], 
+  exports: [MailerService],
 })
 export class MailerModule {}

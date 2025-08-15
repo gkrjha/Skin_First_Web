@@ -46,7 +46,19 @@ export class PatientController {
     @InjectModel(Patient.name) private readonly patientModel: Model<Patient>,
   ) {}
 
-  @Put('update-patient/:id')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('get-all')
+  async getAllPatients(@GetUser() user: JwtUserPayload) {
+    const patients = await this.patientService.getAllUser(user);
+    return patients;
+  }
+
+  @Get('coutn/patient')
+  async countpatient() {
+    return this.patientService.countpatient();
+  }
+
+  @Patch('update-patient/:id')
   async updatePatient(
     @Param('id') id: string,
     @Body() updatePatientDto: UpdatePatientDto,
@@ -56,17 +68,16 @@ export class PatientController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('get-user/:id')
-  async getUserById(@Param('id') id: string) {
-    const user = await this.patientService.findPatientById(id);
-    return user;
+  async getUserById(@Param('id') id: string, @GetUser() user: JwtUserPayload) {
+    const fetcheduser = await this.patientService.findPatientById(id, user);
+    return fetcheduser;
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   async getProfile(@GetUser() user: JwtUserPayload) {
     console.log(user);
-
-    const fullUser = await this.patientService.findPatientById(user._id);
+    const fullUser = await this.patientService.logeduser(user._id, user);
     return fullUser;
   }
 
@@ -129,7 +140,13 @@ export class PatientController {
     @GetUser() user: JwtUserPayload,
   ) {
     console.log(fileType);
-    
+
     return this.patientService.deleteDocument(user._id, fileType, fileUrl);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('recent-patient')
+  async getrecent() {
+    return this.patientService.recentpatient();
   }
 }

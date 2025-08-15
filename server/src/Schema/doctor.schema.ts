@@ -11,8 +11,12 @@ export class Doctor {
   @Prop({ required: true }) phone: string;
   @Prop({ default: 'doctor' }) role: 'doctor';
   @Prop() specialization: string;
-  @Prop({ type: Number, default: 0 }) experience: number;
-  @Prop({ type: Number, default: 0 }) rating: number;
+  @Prop({ type: Number })
+  experience: number;
+
+  @Prop({ type: Number })
+  rating: number;
+
   @Prop() focus: string;
   @Prop() profileImage: string;
   @Prop() licence: string;

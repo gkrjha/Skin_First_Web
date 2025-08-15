@@ -13,6 +13,9 @@ import RatingList from "./Components/RatingList";
 import FavoriteDoctors from "./Components/FavoriteDoctors";
 import ProfilePage from "./Profile";
 import EditProfile from "./Components/UpdateProfile";
+import AdminPage from "./Components/AdminPage";
+import DoctorSignup from "./Components/DoctorSignup";
+import HomePage from "./Components/HomePage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -20,7 +23,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <div>Home Page</div>,
+        element: <HomePage />,
       },
       {
         path: "/login-user",
@@ -61,6 +64,18 @@ const router = createBrowserRouter([
       {
         path: "/edit-profile",
         element: <EditProfile />,
+      },
+      {
+        path: "/admin/dashboard",
+        element: <AdminPage />,
+      },
+      {
+        path: "/doctor/dashboard",
+        element: <AdminPage />,
+      },
+      {
+        path: "/doctor/register",
+        element: <DoctorSignup />,
       },
     ],
   },

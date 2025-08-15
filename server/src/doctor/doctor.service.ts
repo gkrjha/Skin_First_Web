@@ -24,7 +24,7 @@ export class DoctorService {
 
   async createPendingDoctor(
     dto: CreateDoctorDto,
-    invitedBy: string,
+    // invitedBy: string,
     files: {
       profileImage?: Express.Multer.File[];
       licence?: Express.Multer.File[];
@@ -82,7 +82,6 @@ export class DoctorService {
       ...dto,
       password: hashedPassword,
       status: 'pending',
-      invitedBy,
     });
 
     const saved = await doctor.save();
@@ -147,7 +146,7 @@ export class DoctorService {
     }
 
     doctor.status = status;
-   
+
     const updatedDoctor = await doctor.save();
     if (!updatedDoctor) {
       throw new InternalServerErrorException('Failed to update doctor status');
@@ -342,5 +341,10 @@ export class DoctorService {
     });
 
     return { message: 'Doctor documents approved successfully', doctor };
+  }
+
+  async getDoctorCount() {
+    const count = await this.doctorModel.countDocuments().exec();
+    return { count };
   }
 }
